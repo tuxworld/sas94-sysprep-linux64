@@ -1,0 +1,65 @@
+#!/bin/bash
+#Blake RHEL 6 System Prep Script
+echo "iptables - stop, disable from startup"
+service iptables status
+service ip6tables status
+service iptables stop
+service ip6tables stop
+service iptables status
+service ip6tables status
+
+echo "Disable iptables on startup"
+chkconfig iptables off
+chkconfig ip6tables off
+chkconfig | grep -i -e iptables -e ip6tables
+
+echo "Disable SELINUX"
+sestatus
+echo "Disabling SELINUX now"
+echo 0 >/selinux/enforce
+setenforce Permissive
+sed -i -e 's/targeted/disabled/g' /etc/sysconfig/selinux
+Echo "Verify this is good now"
+cat /etc/sysconfig/selinux | grep -i SELINUXTYPE
+echo "Press enter when ready" read
+sestatus
+
+echo "Updating Ulimit settings"
+echo "*       soft    nofile  350000" >> /etc/security/limits.conf
+echo "*       hard    nofile 350000"  >> /etc/security/limits.conf
+echo "*       hard    nproc   100000" >> /etc/security/limits.conf
+echo "*       soft    nproc   100000" >> /etc/security/limits.conf
+
+echo "Updating 90-nproc"
+cat /etc/security/limits.d/90-nproc.conf | grep -i nproc
+sed -i -e 's/1024/10000/g' /etc/security/limits.d/90-nproc.conf
+cat /etc/security/limits.d/90-nproc.conf | grep -i nproc
+
+#creating folders
+mkdir /sas94/
+mkdir /sas94/sashome
+mkdir /sas94/config
+mkdir /sas94/thirdparty
+mkdir /sas94/depot
+
+#Updating /etc/hosts
+echo "10.36.60.29 tuxgrid13.unx.sas.com tuxgrid13" >> /etc/hosts
+echo "10.36.60.28 tuxgrid14.unx.sas.com tuxgrid14" >> /etc/hosts
+echo "10.36.60.30 tuxgrid15.unx.sas.com tuxgrid15" >> /etc/hosts
+echo "10.36.60.31 tuxgrid16.unx.sas.com tuxgrid16" >> /etc/hosts
+
+echo "Dealing with Transparent Huge Page THP by Disabling"
+echo "Current Status"
+ cat /sys/kernel/mm/transparent_hugepage/enabled always madvise [never]
+echo "Disable until restart"
+echo never > /sys/kernel/mm/redhat_transparent_hugepage/enabled
+echo never > /sys/kernel/mm/redhat_transparent_hugepage/defrag
+echo "disabling for good"
+
+echo "if test -f /sys/kernel/mm/transparent_hugepage/enabled; then echo never > /sys/kernel/mm/redhat_transparent_hugepage/enabled fi if test -f /sys/kernel/mm/transparent_hugepage/defrag; then echo never > /sys/kernel/mm/redhat_transparent_hugepage/defrag fi" >> /etc/rc.local
+
+echo "verify new /etc/rc.local"
+cat /etc/rc.local
+
+
+
